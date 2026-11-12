@@ -1,0 +1,107 @@
+name: Deploy Backend to AWS Lambda
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ap-southeast-2
+  ECR_REPOSITORY: fintech-demo-backend
+  LAMBDA_FUNCTION_NAME: fintech-demo-backend
+
+jobs:
+  verify-before-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: fintech
+          POSTGRES_PASSWORD: fintech_ci_password
+          POSTGRES_DB: fintech_demo
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U fintech -d fintech_demo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://fintech:fintech_ci_password@localhost:5432/fintech_demo
+      GEMINI_API_KEY: dummy-ci-key
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv and setup Python 3.13
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+      - name: Install dependencies
+        run: uv sync --frozen
+      - name: Run Ruff linter
+        run: uv run ruff check app scripts tests
+      - name: Run deterministic test suite
+        run: uv run pytest -v -m "not live_eval"
+
+  build-and-deploy:
+    needs: verify-before-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Lambda container image to ECR
+        id: build-image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile.lambda
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update AWS Lambda function (if provisioned)
+        env:
+          IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        run: |
+          if aws lambda get-function --function-name "$LAMBDA_FUNCTION_NAME" >/dev/null 2>&1; then
+            aws lambda update-function-code \
+              --function-name "$LAMBDA_FUNCTION_NAME" \
+              --image-uri "$IMAGE_URI"
+            aws lambda wait function-updated \
+              --function-name "$LAMBDA_FUNCTION_NAME"
+            echo "Updated Lambda $LAMBDA_FUNCTION_NAME to $IMAGE_URI"
+          else
+            echo "::notice::Image pushed to $IMAGE_URI. Create the Lambda function '$LAMBDA_FUNCTION_NAME' in AWS Console using this image, then re-run this workflow."
+          fi

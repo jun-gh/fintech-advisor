@@ -12,7 +12,7 @@ from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel
 
 from app.core.config import get_settings
-from app.core.database import close_db, ensure_schema, init_db
+from app.core.database import close_db, ensure_schema, get_session_factory, init_db
 from app.core.errors import (
     ModelNotFoundError,
     RateLimitExceededError,
@@ -24,6 +24,7 @@ from app.core.errors import (
 from app.main import create_app
 from app.services.embeddings import TaskType, get_embedding_provider
 from app.services.llm import get_llm_client
+from app.services.sop_seeder import seed_default_sops
 
 
 class FakeEmbeddingProvider:
@@ -112,10 +113,14 @@ async def sse_error_app() -> AsyncIterator[FastAPI]:
     settings = get_settings()
     engine = init_db(settings)
     await ensure_schema(engine)
+    fake_embedder = FakeEmbeddingProvider(dimensions=settings.embedding_dimensions)
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        await seed_default_sops(session, fake_embedder)
+        await session.commit()
+
     application = create_app(settings)
-    application.dependency_overrides[get_embedding_provider] = lambda: FakeEmbeddingProvider(
-        dimensions=settings.embedding_dimensions
-    )
+    application.dependency_overrides[get_embedding_provider] = lambda: fake_embedder
     try:
         yield application
     finally:

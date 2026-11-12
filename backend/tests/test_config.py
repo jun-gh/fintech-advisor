@@ -26,6 +26,18 @@ def test_sanitize_asyncpg_url_extracts_neon_ssl_params() -> None:
     assert connect_args == {"ssl": "require"}
 
 
+def test_sanitize_asyncpg_url_disables_statement_cache_for_neon_pooler() -> None:
+    raw = (
+        "postgresql://user:pass@ep-demo-pooler.ap-southeast-2.aws.neon.tech/fintech_demo"
+        "?sslmode=require&channel_binding=require"
+    )
+    url, connect_args = sanitize_asyncpg_url(raw)
+    assert url == (
+        "postgresql+asyncpg://user:pass@ep-demo-pooler.ap-southeast-2.aws.neon.tech/fintech_demo"
+    )
+    assert connect_args == {"ssl": "require", "statement_cache_size": 0}
+
+
 def test_settings_ignores_frontend_vite_vars_and_masks_secret(monkeypatch) -> None:
     monkeypatch.setenv("VITE_API_BASE_URL", "http://localhost:8000/api/v1")
     monkeypatch.setenv("GEMINI_API_KEY", "super-secret-gemini-key")
