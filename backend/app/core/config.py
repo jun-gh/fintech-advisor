@@ -46,6 +46,9 @@ def sanitize_asyncpg_url(raw_url: str) -> tuple[str, dict[str, Any]]:
     sanitized = urlunsplit(
         (parts.scheme, parts.netloc, parts.path, urlencode(filtered_pairs), parts.fragment)
     )
+    # Neon/PgBouncer transaction poolers do not support asyncpg prepared statement caching
+    if parts.hostname and "-pooler" in parts.hostname:
+        connect_args["statement_cache_size"] = 0
     return sanitized, connect_args
 
 
