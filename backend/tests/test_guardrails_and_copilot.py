@@ -26,6 +26,7 @@ from app.services.guardrails import (
 )
 from app.services.llm import get_llm_client
 from app.services.retrieval import RetrievedChunk, reciprocal_rank_fusion
+from app.services.sop_seeder import seed_default_sops
 
 
 class FakeEmbeddingProvider:
@@ -85,11 +86,15 @@ async def copilot_app() -> AsyncIterator[tuple[FastAPI, FakeStructuredLLMClient]
     settings = get_settings()
     engine = init_db(settings)
     await ensure_schema(engine)
+    fake_embedder = FakeEmbeddingProvider(dimensions=settings.embedding_dimensions)
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        await seed_default_sops(session, fake_embedder)
+        await session.commit()
+
     application = create_app(settings)
     fake_llm = FakeStructuredLLMClient()
-    application.dependency_overrides[get_embedding_provider] = lambda: FakeEmbeddingProvider(
-        dimensions=settings.embedding_dimensions
-    )
+    application.dependency_overrides[get_embedding_provider] = lambda: fake_embedder
     application.dependency_overrides[get_llm_client] = lambda: fake_llm
     try:
         yield application, fake_llm
