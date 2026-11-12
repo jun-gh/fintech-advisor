@@ -21,7 +21,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/app/.venv/bin:$PATH" \
     PORT=8000 \
     AWS_LWA_INVOKE_MODE=response_stream \
-    AWS_LWA_READINESS_CHECK_PATH=/api/v1/health
+    AWS_LWA_READINESS_CHECK_PATH=/openapi.json
 
 WORKDIR /app
 

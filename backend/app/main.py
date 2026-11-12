@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.v1.router import api_v1_router
 from app.core.config import Settings, get_settings
@@ -32,12 +33,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         session_factory = get_session_factory()
         async with session_factory() as session:
             db_health = await check_db_health(session)
-        if db_health.connected and db_health.pgvector_enabled:
-            await ensure_schema(engine)
-            logger.info(
-                "Database connected with pgvector %s",
-                db_health.pgvector_version,
-            )
+        if db_health.connected:
+            try:
+                await ensure_schema(engine)
+                logger.info(
+                    "Database connected and schema ensured (pgvector=%s)",
+                    db_health.pgvector_version or "enabled",
+                )
+            except SQLAlchemyError as exc:  # pragma: no cover - defensive startup guard
+                logger.warning("Database schema initialization failed at startup: %s", exc)
         else:
             logger.warning(
                 "Database readiness check degraded at startup (connected=%s, pgvector=%s, error=%s)",
