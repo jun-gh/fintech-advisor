@@ -1,0 +1,113 @@
+name: CI & AI Evals
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  lint-and-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: fintech
+          POSTGRES_PASSWORD: fintech_ci_password
+          POSTGRES_DB: fintech_demo
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U fintech -d fintech_demo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://fintech:fintech_ci_password@localhost:5432/fintech_demo
+      GEMINI_API_KEY: dummy-ci-key
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv and setup Python 3.13
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Install backend dependencies
+        run: uv sync --frozen
+
+      - name: Run Ruff linter
+        run: uv run ruff check app scripts tests
+
+      - name: Run deterministic test suite (PR gate)
+        run: uv run pytest -v -m "not live_eval"
+
+      - name: Verify backend Docker image build
+        working-directory: .
+        run: docker build -t fintech-demo-backend:ci backend
+
+  live-evaluation-benchmark:
+    needs: lint-and-tests
+    if: (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && vars.RUN_LIVE_EVALS == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: fintech
+          POSTGRES_PASSWORD: fintech_ci_password
+          POSTGRES_DB: fintech_demo
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U fintech -d fintech_demo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://fintech:fintech_ci_password@localhost:5432/fintech_demo
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_CHAT_MODEL: gemini-3.6-flash
+      GEMINI_FALLBACK_CHAT_MODEL: gemini-3.5-flash
+      GEMINI_EMBEDDING_MODEL: gemini-embedding-001
+      EMBEDDING_DIMENSIONS: "768"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv and setup Python 3.13
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          python-version: "3.13"
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Install backend dependencies
+        run: uv sync --frozen
+
+      - name: Run live Gemini LLM-as-a-Judge evaluation suite
+        run: uv run pytest -v -m live_eval --junitxml=eval-results.xml
+
+      - name: Upload eval report artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-results
+          path: backend/eval-results.xml
