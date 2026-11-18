@@ -11,58 +11,85 @@ Designed as an end-to-end reference architecture for regulated financial technol
 ## Table of Contents
 
 1. [Architecture Overview](#architecture-overview)
-2. [Tech Stack](#tech-stack)
-3. [Project Structure](#project-structure)
-4. [Environment Configuration](#environment-configuration)
-5. [Quick Start (Docker Compose)](#quick-start-docker-compose)
-6. [Local Development (Hot Reload)](#local-development-hot-reload)
-7. [Bundled SOP Corpus](#bundled-sop-corpus)
-8. [API Reference & Error Envelopes](#api-reference--error-envelopes)
-9. [Security, Guardrails & Auditability](#security-guardrails--auditability)
-10. [Frontend Capabilities](#frontend-capabilities)
-11. [Testing, Linting & LLM Evaluations](#testing-linting--llm-evaluations)
-12. [CI/CD Pipeline](#cicd-pipeline)
+2. [Why Hybrid RAG?](#why-hybrid-rag)
+3. [Tech Stack](#tech-stack)
+4. [Project Structure](#project-structure)
+5. [Environment Configuration](#environment-configuration)
+6. [Quick Start (Docker Compose)](#quick-start-docker-compose)
+7. [Local Development (Hot Reload)](#local-development-hot-reload)
+8. [Cloud Deployment (AWS Lambda, Neon & Vercel)](#cloud-deployment-aws-lambda-neon--vercel)
+9. [Bundled SOP Corpus](#bundled-sop-corpus)
+10. [API Reference & Error Envelopes](#api-reference--error-envelopes)
+11. [Security, Guardrails & Auditability](#security-guardrails--auditability)
+12. [Frontend Capabilities](#frontend-capabilities)
+13. [CI/CD & Evals Pipeline](#cicd--evals-pipeline)
 
 ---
 
 ## Architecture Overview
 
+FintechDemo is designed to operate seamlessly both in local containerized development and in a resilient, serverless cloud environment:
+
 ```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│  React 19 + Vite UI (Nginx reverse proxy in Docker, port 5173)             │
-│  • Copilot Q&A (SSE stage progress) • Native <dialog> Citation Inspector   │
-│  • SOP Knowledge Base + Empty-DB Seeder • Responsive Audit Trail Table     │
-└──────────────────────────────────┬─────────────────────────────────────────┘
-                                   │ HTTP / SSE (/api/v1/*)
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────────┐
-│  FastAPI Backend (Python 3.13, Async SQLAlchemy + asyncpg, port 8000)      │
-│  • Request-ID Middleware • Uniform ErrorEnvelope • SSE event:error frames  │
-└──────────────────────────────────┬─────────────────────────────────────────┘
-                                   │
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────────┐
-│  LangGraph Stateful Compliance Copilot (StateGraph with TypedDict State)   │
-│                                                                            │
-│  [1. guardrail] ──(blocked)──────────────────────────────► [4. audit]      │
-│        │                                                        ▲          │
-│     (clean: PII masked + XML-delimited)                         │          │
-│        ▼                                                        │          │
-│  [2. retrieve]  Hybrid Search (pgvector HNSW + FTS GIN + RRF)   │          │
-│        │                                                        │          │
-│        ▼                                                        │          │
-│  [3. generate]  Gemini Structured JSON + Citation Gate ─────────┘          │
-│                 (Primary model -> 10s timeout/spike -> Fallback model)     │
-└──────────────────────────────────┬─────────────────────────────────────────┘
-                                   │
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────────┐
-│  PostgreSQL 16 + pgvector (port 5432)                                      │
-│  • policy_documents  (SHA-256 content_hash for idempotent ingestion)       │
-│  • context_chunks    (Vector(768) HNSW cosine + generated TSVECTOR GIN)    │
-│  • audit_logs        (sanitized_query, answer, PII count, chunks, outcome) │
-└────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│  Client Tier: React 19 + Vite SPA (Vercel Edge / Local Nginx)                          │
+│  • Copilot Workspace (live SSE stage progress: guardrail -> retrieve -> generate)      │
+│  • PII sanitization indicators • Native <dialog> SOP Citation Inspector                │
+│  • Responsive @container Audit Trail • Dark/Light CSS light-dark() theming             │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │ HTTPS / SSE Streaming (/api/v1/*)
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│  Compute Tier: FastAPI (Python 3.13) on AWS Lambda + Lambda Web Adapter (or Docker)    │
+│  • InvokeMode: RESPONSE_STREAM via Lambda Function URL (no API Gateway timeout limits) │
+│  • Dynamic Request-ID tracking & uniform ErrorEnvelope for all 4xx/5xx responses       │
+│  • Primary-to-fallback model failover on 10s timeouts or 5xx upstream spikes           │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│  Orchestration: LangGraph Stateful Compliance Copilot (StateGraph with TypedDict State)│
+│                                                                                        │
+│  [1. guardrail_node] ──(prompt injection or malformed)──► [4. audit_node]              │
+│          │                                                        ▲                    │
+│      (clean input: Luhn PAN masked, CVV/SSN/email redacted)       │                    │
+│          ▼                                                        │                    │
+│  [2. retrieve_node]  Hybrid Search (pgvector HNSW + FTS GIN + RRF)│                    │
+│          │                                                        │                    │
+│          ▼                                                        │                    │
+│  [3. generate_node]  Gemini Structured JSON + Citation Gate ──────┘                    │
+│                      (Strict chunk_id verification; fail-closed on zero match)         │
+└───────────────────────────────────────────┬────────────────────────────────────────────┘
+                                            │
+                                            ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│  Data Tier: PostgreSQL 16 + pgvector (Neon Serverless with PgBouncer / Local Docker)   │
+│  • policy_documents : SOP metadata + SHA-256 content_hash for idempotent ingestion     │
+│  • context_chunks   : 768-dim Vector (HNSW cosine) + generated TSVECTOR (GIN index)    │
+│  • audit_logs       : Immutable record of queries, latency, redacted count & outcomes  │
+└────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Why Hybrid RAG?
+
+In financial compliance and card dispute operations, standard vector search alone regularly causes subtle, dangerous hallucinations:
+
+| Query Pattern | Why Pure Vector Search Fails | Why Hybrid RAG (Dense + FTS + RRF) Succeeds |
+| :--- | :--- | :--- |
+| **Exact Regulatory Codes**<br>(e.g. `10.4`, `CE 3.0`, `12 CFR § 1026.12(c)`) | Embeddings compress alphanumeric codes into semantic neighborhoods, often returning irrelevant fraud sections with similar wording. | PostgreSQL Full-Text Search (GIN `TSVECTOR`) guarantees exact keyword hit matching on specific reason codes. |
+| **Numeric Deadlines & Thresholds**<br>(e.g. `10 business days` vs `20 days`, `< $25` write-off) | Numbers often lose distinctiveness in vector space; a query for a 10-day deadline can surface a 45-day extension clause. | BM25/FTS pinpoints exact numeric constraints while semantic dense search matches the intent. |
+| **Paraphrased Natural Language**<br>(e.g. *"how long before we must give temporary credit on debit card?"*) | Exact keyword matching fails completely because the text uses the regulatory term *"provisional credit under Reg E"*. | Gemini 768-dimensional embeddings (`RETRIEVAL_QUERY`) capture semantic context and map colloquial terms to formal SOP text. |
+
+### Reciprocal Rank Fusion (RRF)
+Rather than tuning fragile score normalization weights between unbounded BM25 scores and cosine distances, FintechDemo fuses candidate lists using **Reciprocal Rank Fusion (RRF)**:
+
+$$\text{RRF Score}(d) = \sum_{m \in \{\text{dense}, \text{sparse}\}} \frac{1}{k + \text{rank}_m(d)} \quad (k = 60)$$
+
+- **Dense Retriever:** Computes cosine distance against `context_chunks.embedding` using an HNSW index (`vector_cosine_ops`).
+- **Sparse Retriever:** Executes `websearch_to_tsquery` across title, section headers, and chunk body using a GIN index on `to_tsvector('english', ...)`.
+- **RRF Merger:** Combines top-$K$ candidates, merges overlapping chunks, and guarantees that chunks scoring high in both methods rank at the top.
 
 ---
 
@@ -246,6 +273,32 @@ cp .env.example .env
 
 ---
 
+## Cloud Deployment (AWS Lambda, Neon & Vercel)
+
+FintechDemo is deployed to zero/near-zero cost serverless infrastructure:
+
+```text
+┌────────────────────────┐      HTTPS / SSE       ┌─────────────────────────────────────┐      asyncpg      ┌────────────────────────┐
+│ Vercel (Edge Network)  │ ─────────────────────► │ AWS Lambda (ap-southeast-2)         │ ────────────────► │ Neon PostgreSQL        │
+│ • React 19 + Vite SPA  │                        │ • ECR Container Image               │   (SSL Mode +     │ • pgvector 0.8.0       │
+│ • vercel.json rewrites │                        │ • Lambda Web Adapter (1.1.0)        │   statement_cache │ • Transaction Pooler   │
+│                        │                        │ • InvokeMode: RESPONSE_STREAM       │   size = 0)       │ • TSVECTOR GIN Index   │
+└────────────────────────┘                        └─────────────────────────────────────┘                   └────────────────────────┘
+```
+
+1. **Frontend (Vercel):**
+   - Configured with `frontend/vercel.json` for SPA client-side routing rewrites (`/(.*) -> /index.html`).
+   - Env var `VITE_API_BASE_URL` points to the AWS Lambda Function URL (`https://<lambda-id>.lambda-url.ap-southeast-2.on.aws/api/v1`).
+2. **Backend (AWS Lambda + ECR):**
+   - Packaged as a multi-stage Docker image (`backend/Dockerfile.lambda`) leveraging `public.ecr.aws/awsguru/aws-lambda-adapter:1.1.0`.
+   - Exposed via **AWS Lambda Function URL** with `InvokeMode: RESPONSE_STREAM` (enables real-time SSE streaming up to 15 minutes, bypassing the standard 30-second API Gateway timeout).
+   - Fast readiness check via `/openapi.json` and resilient `ensure_schema()` bootstrap on cold-start.
+3. **Database (Neon PostgreSQL):**
+   - Managed serverless PostgreSQL 16 with `pgvector` pre-installed.
+   - Uses Neon's connection pooler (`-pooler` hostname) with `sanitize_asyncpg_url()` automatically setting `statement_cache_size = 0` to prevent PgBouncer transaction-pooler cache conflicts.
+
+---
+
 ## Bundled SOP Corpus
 
 Located in `backend/data/sops/` and indexed with Markdown header breadcrumbs + 768-dim Gemini embeddings:
@@ -333,7 +386,7 @@ Every HTTP error (`4xx`/`5xx`) and mid-stream SSE failure (`event: error`) retur
 
 ### Linting & Deterministic PR Suite (Zero API Spend)
 
-Runs fast unit and PostgreSQL/`pgvector` integration tests with mocked LLM/embedding providers (`25 tests` excluding `live_eval`):
+Runs fast unit and PostgreSQL/`pgvector` integration tests with mocked LLM/embedding providers (`26 tests` excluding `live_eval`):
 
 ```sh
 cd backend
@@ -359,9 +412,47 @@ npm run build
 
 ---
 
-## CI/CD Pipeline
+## CI/CD & Evals Pipeline
 
-Defined in [`.github/workflows/ci.yml`](file:///root_path/.github/workflows/ci.yml) using a dual-tier strategy with a `pgvector/pgvector:pg16` service container:
+FintechDemo implements an enterprise-grade dual-tier CI/CD workflow across GitHub Actions:
 
-1. **`lint-and-tests` (Every PR & push to `main`):** Installs dependencies via `uv`, runs `ruff check app scripts tests`, executes `pytest -v -m "not live_eval"`, and verifies `docker build -t fintech-demo-backend:ci backend`.
-2. **`live-evaluation-benchmark` (`main` push or `workflow_dispatch` when `vars.RUN_LIVE_EVALS == 'true'`):** Runs `pytest -v -m live_eval --junitxml=eval-results.xml` using `secrets.GEMINI_API_KEY` and uploads `eval-results.xml` as a build artifact.
+```text
+PR Opened / Pushed ──► [.github/workflows/ci.yml]
+                       ├── 1. lint-and-tests (PR Gate)
+                       │      ├── uv sync --frozen
+                       │      ├── ruff check app scripts tests
+                       │      ├── pgvector/pgvector:pg16 service container
+                       │      ├── pytest -v -m "not live_eval" (26 deterministic tests)
+                       │      └── Dockerfile verification build
+                       │
+                       └── 2. live-evaluation-benchmark (Evaluations Gate)
+                              ├── Runs on main merge or manual dispatch (vars.RUN_LIVE_EVALS == 'true')
+                              ├── Tests real Gemini embeddings + LLM Copilot against pgvector
+                              └── Custom LLM-as-a-Judge scoring (faithfulness, relevance, fact coverage)
+
+Merge to main ───────► [.github/workflows/deploy.yml]
+                       ├── Pre-flight verification (ruff + deterministic pytest)
+                       ├── Authenticates to AWS via GitHub Actions (ap-southeast-2)
+                       ├── docker/setup-buildx-action (linux/amd64, provenance: false, sbom: false)
+                       ├── Builds & pushes Lambda container image to Amazon ECR
+                       └── Automatically triggers aws lambda update-function-code
+```
+
+### 1. Deterministic PR Gate (`ci.yml`)
+- Runs on every Pull Request and push to `main`.
+- Spins up a real `pgvector/pgvector:pg16` Docker service container directly inside the GitHub Actions runner.
+- Verifies code style (`ruff`), executes all 26 deterministic unit & integration tests (Luhn masking, prompt injection defense, RRF fusion, fail-closed citation gates, URL sanitization), and verifies the production Docker build—with **zero external API calls and $0 LLM spend**.
+
+### 2. Live LLM-as-a-Judge Evaluation Gate (`ci.yml`)
+- Executes against real Gemini models when `vars.RUN_LIVE_EVALS == 'true'`.
+- Evaluates the system across a golden dataset (`backend/tests/evals/data/benchmark.jsonl`), testing both positive queries (requiring specific regulatory facts and accurate chunk citations) and negative tests (testing fail-closed behavior on out-of-scope queries).
+- A secondary judge prompt (`JudgeEvaluation`) scores:
+  - **Faithfulness (1–5):** Is every claim strictly supported by the cited policy context?
+  - **Relevance (1–5):** Does the answer directly address the question without wandering?
+  - **Fact Coverage & Negative Tests:** Did the model refuse unsupported queries without hallucinating?
+
+### 3. Continuous Deployment to AWS Lambda (`deploy.yml`)
+- Automatically triggered on push to `main`.
+- Authenticates securely with AWS in `ap-southeast-2` (Sydney).
+- Builds the optimized Lambda Web Adapter image (`backend/Dockerfile.lambda`) using Buildx for `linux/amd64` (`provenance: false` to ensure AWS Lambda compatibility).
+- Pushes tags (`<sha>` and `latest`) to Amazon ECR and automatically runs `aws lambda update-function-code` to roll out the new image without downtime.
