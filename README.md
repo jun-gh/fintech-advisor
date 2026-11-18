@@ -1,8 +1,10 @@
-# FintechDemo — Financial Compliance & Policy Copilot
+# FinTech — Financial Compliance & Policy Copilot
 
 A production-oriented, full-stack AI compliance copilot built with **Python (FastAPI)**, **LangGraph**, **PostgreSQL + `pgvector`**, **Google Gemini**, and **React + Vite**.
 
 Designed as an end-to-end reference architecture for regulated financial technology environments—featuring **hybrid vector + full-text retrieval**, **Luhn-validated PCI/PII masking**, **prompt-injection guardrails**, **fail-closed citation grounding**, **SSE stage streaming**, **primary-to-fallback model failover**, **immutable audit logging**, and an **LLM-as-a-Judge evaluation harness**.
+
+🔗 **Live:** [fintech-advisor-jmco.vercel.app](https://fintech-advisor-jmco.vercel.app/)
 
 ---
 
