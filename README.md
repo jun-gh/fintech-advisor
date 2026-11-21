@@ -23,10 +23,13 @@ Designed as an end-to-end reference architecture for regulated financial technol
 11. [Security, Guardrails & Auditability](#security-guardrails--auditability)
 12. [Frontend Capabilities](#frontend-capabilities)
 13. [CI/CD & Evals Pipeline](#cicd--evals-pipeline)
+14. [License & Commercial Inquiries](#license--commercial-inquiries)
 
 ---
 
 ## Architecture Overview
+
+![FintechDemo Serverless Architecture](architecture.gif)
 
 FintechDemo is designed to operate seamlessly both in local containerized development and in a resilient, serverless cloud environment:
 
@@ -456,3 +459,14 @@ Merge to main ───────► [.github/workflows/deploy.yml]
 - Authenticates securely with AWS in `ap-southeast-2` (Sydney).
 - Builds the optimized Lambda Web Adapter image (`backend/Dockerfile.lambda`) using Buildx for `linux/amd64` (`provenance: false` to ensure AWS Lambda compatibility).
 - Pushes tags (`<sha>` and `latest`) to Amazon ECR and automatically runs `aws lambda update-function-code` to roll out the new image without downtime.
+
+---
+
+## License & Commercial Inquiries
+
+Copyright © 2026–present Martin Abanes. All rights reserved.
+
+- **Non-Commercial Use**: Free for personal inspection, research, and non-commercial evaluation.
+- **Commercial Use**: Commercial deployment, white-labeling, or client integration requires an explicit commercial agreement or engagement.
+
+For freelance consulting or commercial licensing inquiries, contact Martin Abanes at [miabanes@gmail.com](mailto:miabanes@gmail.com).
