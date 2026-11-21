@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 520" width="100%" height="100%">
+  <defs>
+    <style>
+      @keyframes pulseRequest {
+        0% { cx: 245px; cy: 220px; opacity: 1; }
+        25% { cx: 285px; cy: 220px; opacity: 1; }
+        50% { cx: 525px; cy: 220px; opacity: 1; }
+        70% { cx: 775px; cy: 160px; opacity: 1; }
+        85% { cx: 775px; cy: 370px; opacity: 1; }
+        100% { cx: 245px; cy: 220px; opacity: 0; }
+      }
+      @keyframes streamSSE {
+        0% { stroke-dashoffset: 60; }
+        100% { stroke-dashoffset: 0; }
+      }
+      .font-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-weight: 700; fill: #0f172a; }
+      .font-sub { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 13px; fill: #64748b; }
+      .font-card-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-weight: 700; font-size: 17px; fill: #0f172a; }
+      .font-card-sub { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 12px; fill: #64748b; }
+      .font-item { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 13px; fill: #334155; }
+      .font-badge { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+      .pulse-dot { animation: pulseRequest 4s infinite cubic-bezier(0.4, 0, 0.2, 1); }
+      .sse-line { stroke-dasharray: 6 4; animation: streamSSE 1.5s linear infinite; }
+    </style>
+    <filter id="card-shadow" x="-4%" y="-2%" width="108%" height="106%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.04" />
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.03" />
+    </filter>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#f8fafc" />
+  
+  <!-- Subtle Header -->
+  <rect x="0" y="0" width="1060" height="60" fill="#ffffff" />
+  <line x1="0" y1="60" x2="1060" y2="60" stroke="#e2e8f0" stroke-width="1" />
+  <text x="35" y="28" class="font-title" font-size="18">FintechDemo — Serverless RAG &amp; Compliance Architecture</text>
+  <text x="35" y="47" class="font-sub">Event-Driven Reactive Streaming &amp; Fail-Closed Hybrid Grounding (US &amp; EU Compliance)</text>
+  <rect x="910" y="18" width="115" height="24" rx="12" fill="#e0e7ff" />
+  <text x="967" y="34" class="font-badge" fill="#4338ca" text-anchor="middle">LIVE PRODUCTION</text>
+
+  <!-- ================= CARD 1: VERCEL REACT SPA ================= -->
+  <g filter="url(#card-shadow)">
+    <rect x="35" y="85" width="210" height="395" rx="12" fill="#ffffff" stroke="#c7d2fe" stroke-width="1.5" />
+    <rect x="35" y="85" width="210" height="6" rx="3" fill="#6366f1" />
+  </g>
+  <rect x="50" y="105" width="90" height="20" rx="10" fill="#ede9fe" />
+  <text x="95" y="119" class="font-badge" fill="#6d28d9" text-anchor="middle">CLIENT TIER</text>
+  <text x="50" y="148" class="font-card-title">Vercel React SPA</text>
+  <text x="50" y="167" class="font-card-sub">React 19 + Vite 6 (Edge CDN)</text>
+  <line x1="50" y1="182" x2="230" y2="182" stroke="#f1f5f9" stroke-width="1.5" />
+
+  <text x="50" y="208" class="font-item"><tspan fill="#6366f1">●</tspan> Copilot Q&amp;A Interface</text>
+  <text x="50" y="234" class="font-item"><tspan fill="#6366f1">●</tspan> Real-Time SSE Stages</text>
+  <text x="50" y="260" class="font-item"><tspan fill="#6366f1">●</tspan> PII Masking Indicators</text>
+  <text x="50" y="286" class="font-item"><tspan fill="#6366f1">●</tspan> Native &lt;dialog&gt; Inspector</text>
+  <text x="50" y="312" class="font-item"><tspan fill="#6366f1">●</tspan> Responsive Audit Trail</text>
+  <text x="50" y="338" class="font-item"><tspan fill="#6366f1">●</tspan> Accessible Dark/Light</text>
+
+  <rect x="50" y="405" width="180" height="55" rx="8" fill="#f8fafc" stroke="#e2e8f0" />
+  <text x="62" y="425" class="font-card-sub" font-weight="600">Configuration:</text>
+  <text x="62" y="443" class="font-card-sub" fill="#4f46e5">vercel.json SPA rewrites</text>
+
+  <!-- ================= CARD 2: AWS LAMBDA ================= -->
+  <g filter="url(#card-shadow)">
+    <rect x="290" y="85" width="220" height="395" rx="12" fill="#ffffff" stroke="#fde68a" stroke-width="1.5" />
+    <rect x="290" y="85" width="220" height="6" rx="3" fill="#f59e0b" />
+  </g>
+  <rect x="305" y="105" width="135" height="20" rx="10" fill="#fef3c7" />
+  <text x="372" y="119" class="font-badge" fill="#b45309" text-anchor="middle">SERVERLESS COMPUTE</text>
+  <text x="305" y="148" class="font-card-title">AWS Lambda</text>
+  <text x="305" y="167" class="font-card-sub">Region: ap-southeast-2 (Sydney)</text>
+  <line x1="305" y1="182" x2="495" y2="182" stroke="#f1f5f9" stroke-width="1.5" />
+
+  <text x="305" y="208" class="font-item"><tspan fill="#f59e0b">●</tspan> Lambda Web Adapter</text>
+  <text x="320" y="226" class="font-card-sub">(aws-lambda-adapter 1.1.0)</text>
+  <text x="305" y="252" class="font-item"><tspan fill="#f59e0b">●</tspan> InvokeMode:</text>
+  <text x="320" y="270" class="font-card-sub" fill="#d97706" font-weight="700">RESPONSE_STREAM</text>
+  <text x="305" y="296" class="font-item"><tspan fill="#f59e0b">●</tspan> FastAPI (Python 3.13)</text>
+  <text x="305" y="322" class="font-item"><tspan fill="#f59e0b">●</tspan> Uniform ErrorEnvelope</text>
+  <text x="305" y="348" class="font-item"><tspan fill="#f59e0b">●</tspan> Fast /openapi.json Probe</text>
+
+  <rect x="305" y="405" width="190" height="55" rx="8" fill="#f8fafc" stroke="#e2e8f0" />
+  <text x="317" y="425" class="font-card-sub" font-weight="600">Packaging:</text>
+  <text x="317" y="443" class="font-card-sub" fill="#d97706">ECR Image (linux/amd64)</text>
+
+  <!-- ================= CARD 3: LANGGRAPH COPILOT ================= -->
+  <g filter="url(#card-shadow)">
+    <rect x="555" y="85" width="220" height="395" rx="12" fill="#ffffff" stroke="#a7f3d0" stroke-width="1.5" />
+    <rect x="555" y="85" width="220" height="6" rx="3" fill="#10b981" />
+  </g>
+  <rect x="570" y="105" width="105" height="20" rx="10" fill="#d1fae5" />
+  <text x="622" y="119" class="font-badge" fill="#047857" text-anchor="middle">ORCHESTRATION</text>
+  <text x="570" y="148" class="font-card-title">LangGraph Copilot</text>
+  <text x="570" y="167" class="font-card-sub">StateGraph (TypedDict State)</text>
+  <line x1="570" y1="182" x2="760" y2="182" stroke="#f1f5f9" stroke-width="1.5" />
+
+  <text x="570" y="206" class="font-item" font-weight="600" fill="#047857">1. guardrail_node</text>
+  <text x="585" y="224" class="font-card-sub">Luhn PAN Masking &amp; Tags</text>
+
+  <text x="570" y="254" class="font-item" font-weight="600" fill="#047857">2. retrieve_node</text>
+  <text x="585" y="272" class="font-card-sub">Hybrid Dense + FTS (RRF)</text>
+
+  <text x="570" y="302" class="font-item" font-weight="600" fill="#047857">3. generate_node</text>
+  <text x="585" y="320" class="font-card-sub">Strict chunk_id Validation</text>
+  <text x="585" y="338" class="font-card-sub" fill="#dc2626">Fail-Closed on Mismatch</text>
+
+  <text x="570" y="368" class="font-item" font-weight="600" fill="#047857">4. audit_node</text>
+  <text x="585" y="386" class="font-card-sub">Immutable Latency &amp; PII Log</text>
+
+  <!-- ================= CARD 4A: NEON POSTGRESQL ================= -->
+  <g filter="url(#card-shadow)">
+    <rect x="815" y="85" width="215" height="185" rx="12" fill="#ffffff" stroke="#bae6fd" stroke-width="1.5" />
+    <rect x="815" y="85" width="215" height="6" rx="3" fill="#0284c7" />
+  </g>
+  <rect x="830" y="103" width="95" height="20" rx="10" fill="#e0f2fe" />
+  <text x="877" y="117" class="font-badge" fill="#0369a1" text-anchor="middle">VECTOR + FTS</text>
+  <text x="830" y="144" class="font-card-title">Neon Postgres</text>
+  <text x="830" y="162" class="font-card-sub">Serverless PostgreSQL 16</text>
+  <line x1="830" y1="174" x2="1015" y2="174" stroke="#f1f5f9" stroke-width="1.5" />
+
+  <text x="830" y="196" class="font-item"><tspan fill="#0284c7">●</tspan> pgvector 0.8.0 (HNSW)</text>
+  <text x="830" y="218" class="font-item"><tspan fill="#0284c7">●</tspan> TSVECTOR GIN index</text>
+  <text x="830" y="240" class="font-item"><tspan fill="#0284c7">●</tspan> PgBouncer pooler</text>
+
+  <!-- ================= CARD 4B: GOOGLE GEMINI ================= -->
+  <g filter="url(#card-shadow)">
+    <rect x="815" y="295" width="215" height="185" rx="12" fill="#ffffff" stroke="#bfdbfe" stroke-width="1.5" />
+    <rect x="815" y="295" width="215" height="6" rx="3" fill="#2563eb" />
+  </g>
+  <rect x="830" y="313" width="95" height="20" rx="10" fill="#dbeafe" />
+  <text x="877" y="327" class="font-badge" fill="#1d4ed8" text-anchor="middle">LLM INFERENCE</text>
+  <text x="830" y="354" class="font-card-title">Google Gemini</text>
+  <text x="830" y="372" class="font-card-sub">google-genai Python SDK</text>
+  <line x1="830" y1="384" x2="1015" y2="384" stroke="#f1f5f9" stroke-width="1.5" />
+
+  <text x="830" y="406" class="font-item"><tspan fill="#2563eb">●</tspan> Primary: 3.6 Flash</text>
+  <text x="830" y="428" class="font-item"><tspan fill="#2563eb">●</tspan> Fallback: 3.5 Flash</text>
+  <text x="830" y="450" class="font-item"><tspan fill="#2563eb">●</tspan> 768-dim Embeddings</text>
+
+  <!-- ================= CONNECTING ARROWS & LABELS ================= -->
+  <!-- Vercel -> Lambda -->
+  <path d="M 245 220 L 290 220" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="267" y="210" class="font-card-sub" text-anchor="middle" font-weight="600" fill="#475569">HTTPS</text>
+  
+  <!-- Lambda -> Vercel (SSE) -->
+  <path d="M 290 320 L 245 320" stroke="#6366f1" stroke-width="2" class="sse-line" />
+  <polygon points="245,320 252,316 252,324" fill="#6366f1" />
+  <text x="267" y="340" class="font-card-sub" text-anchor="middle" font-weight="600" fill="#6366f1">SSE Stream</text>
+
+  <!-- Lambda -> LangGraph -->
+  <path d="M 510 260 L 555 260" stroke="#94a3b8" stroke-width="2" />
+  <polygon points="555,260 548,256 548,264" fill="#94a3b8" />
+  <text x="532" y="250" class="font-card-sub" text-anchor="middle" font-weight="600" fill="#475569">FastAPI</text>
+
+  <!-- LangGraph -> Neon (Hybrid) -->
+  <path d="M 775 160 L 815 160" stroke="#0284c7" stroke-width="2" />
+  <polygon points="815,160 808,156 808,164" fill="#0284c7" />
+  <text x="795" y="150" class="font-card-sub" text-anchor="middle" font-weight="600" fill="#0284c7">RRF</text>
+
+  <!-- LangGraph -> Gemini (JSON) -->
+  <path d="M 775 370 L 815 370" stroke="#2563eb" stroke-width="2" />
+  <polygon points="815,370 808,366 808,374" fill="#2563eb" />
+  <text x="795" y="360" class="font-card-sub" text-anchor="middle" font-weight="600" fill="#2563eb">Schema</text>
+
+  <!-- Pulsing Data Packet -->
+  <circle class="pulse-dot" r="6" fill="#3b82f6" filter="url(#glow)" />
+</svg>
